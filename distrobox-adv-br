@@ -1,32 +1,21 @@
-# --- Configuração Básica ---
+[distrobox-adv-br]
 image=docker.io/library/debian:trixie
 home=~/.distrobox-adv-br
-
-# Instalar pacotes adicionais do sistema (executado antes do init_hooks)
 additional_packages="firefox-esr firefox-esr-l10n-pt-br libnss3-tools gvfs"
-
-# --- Comandos Combinados de Primeira Execução (INIT_HOOKS) ---
 init_hooks="if [ ! -f /root/.first_run_complete ]; then \
-  # Instalação dos softwares via scripts
-  curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_safesign.sh | sh && \
-  curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_safenet.sh | sh && \
-  curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_serproid.sh | sh && \
-  curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_assinadorserpro.sh | sh && \
-  curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_java.sh | sh && \
-  curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_pjeoffice.sh | sh && \
-  curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_webpki.sh | sh && \
-  curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_websigner.sh | sh && \
-  curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_certisign.sh | sh && \
-  \
-  # Configurações do usuário e links simbólicos
-  curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/configurar_tokens_firefox.sh | sudo -u $USER sh && \
-  rm -rf ${HOME}/.distrobox-adv-br/Downloads && \
-  sudo -u $USER ln -s ${HOME}/Downloads/ ${HOME}/.distrobox-adv-br && \
-  rm ${HOME}/.distrobox-adv-br/.wget-hsts && \
-  \
-  # Marca a conclusão para evitar repetição
-  touch /root/.first_run_complete; \
+    curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_safesign.sh | sh && \
+    curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_safenet.sh | sh && \
+    curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_serproid.sh | sh && \
+    curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_assinadorserpro.sh | sh && \
+    curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_java.sh | sh && \
+    curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_pjeoffice.sh | sh && \
+    curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_webpki.sh | sh && \
+    curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_websigner.sh | sh && \
+    curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/instalar_certisign.sh | sh && \
+    curl -fsSL https://raw.githubusercontent.com/pedrohqb/distrobox-adv-br/refs/heads/main/scripts/configurar_tokens_firefox.sh | sudo -u $USER sh && \
+    rm -rf ${HOME}/.distrobox-adv-br/Downloads && \
+    sudo -u $USER ln -s ${HOME}/Downloads/ ${HOME}/.distrobox-adv-br && \
+    rm ${HOME}/.distrobox-adv-br/.wget-hsts && \
+    touch /root/.first_run_complete; \
 fi"
-
-# Exportar aplicativos
 exported_apps="firefox-esr tokenadmin pjeoffice-pro serproid assinador-serpro"
