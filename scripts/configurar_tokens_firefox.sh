@@ -1,64 +1,93 @@
 #!/bin/bash
 
 # --- Configuração das bibliotecas ---
-# Defina o caminho para a sua biblioteca SafeSign e o nome do módulo
-CAMINHO_SAFESIGN="/usr/lib/libaetpkss.so"
+# Caminhos ajustados para o padrão Debian e checagem de existência
+if [ -f "/usr/lib/libaetpkss.so.3" ]; then
+    CAMINHO_SAFESIGN="/usr/lib/libaetpkss.so.3"
+else
+    CAMINHO_SAFESIGN="/usr/lib/libaetpkss.so"
+fi
 NOME_SAFESIGN="SafeSign"
 
-# Defina o caminho para a sua biblioteca SafeNet e o nome do módulo
-CAMINHO_SAFENET="/usr/lib/libeToken.so"
+if [ -f "/usr/lib/libeToken.so.10" ]; then
+    CAMINHO_SAFENET="/usr/lib/libeToken.so.10"
+elif [ -f "/usr/lib/libeToken.so" ]; then
+    CAMINHO_SAFENET="/usr/lib/libeToken.so"
+else
+    CAMINHO_SAFENET="/usr/lib/libeToken.so"
+fi
 NOME_SAFENET="SafeNet"
 
-# --- Passo 1: Criar um novo perfil do Firefox pela linha de comando ---
-echo "Iniciando o Firefox em modo headless para criar um novo perfil (default-esr)..."
-firefox-esr --headless --new-tab about:blank &
+# --- Passo 1: Definir e Criar o Diretório do Perfil Manualmente ---
+# Usamos um nome fixo para garantir consistência
+PERFIL_NOME="default-esr"
+PERFIL_PATH="distrobox.default-esr"
+DIR_PERFIL="$HOME/.mozilla/firefox/$PERFIL_PATH"
+ARQUIVO_INI="$HOME/.mozilla/firefox/profiles.ini"
 
-# Espera por 6 segundos para o Firefox criar os arquivos do perfil
-sleep 6
+echo "Criando estrutura de perfil do Firefox manualmente..."
 
-# Mata todos os processos do Firefox para garantir que o navegador esteja fechado
-pkill -f firefox-esr
-echo "Processo do Firefox encerrado."
-echo "---"
+# Cria a pasta do perfil
+mkdir -p "$DIR_PERFIL"
 
-# --- Passo 2: Encontrar o diretório do perfil recém-criado ---
-# Procura por perfis que terminam com "default-esr"
-CAMINHO_DO_PERFIL=$(find ~/.mozilla/firefox -maxdepth 1 -type d -name "*.default-esr")
-
-# Verifica se o perfil foi encontrado
-if [ -z "$CAMINHO_DO_PERFIL" ]; then
-    echo "Erro: Não foi possível encontrar um perfil default-esr. A operação foi abortada."
-    exit 1
-fi
-
-echo "Perfil encontrado: ${CAMINHO_DO_PERFIL}"
-echo "---"
-
-# --- Passo 3: Adicionar as bibliotecas de segurança ---
-
-# Adicionar SafeSign
-echo "Adicionando a biblioteca ${NOME_SAFESIGN}..."
-yes | modutil -add "${NOME_SAFESIGN}" -libfile "${CAMINHO_SAFESIGN}" -dbdir "sql:${CAMINHO_DO_PERFIL}"
-
-# Verifica se a adição foi bem-sucedida
-if [ $? -eq 0 ]; then
-    echo "${NOME_SAFESIGN} adicionado com sucesso."
+# --- Passo 2: Inicializar o Banco de Dados NSS (Certificados) ---
+# Isso cria os arquivos cert9.db e key4.db sem abrir o Firefox
+if [ ! -f "$DIR_PERFIL/cert9.db" ]; then
+    echo "Inicializando banco de dados de certificados..."
+    # -N: Novo DB, --empty-password: sem senha mestra inicial
+    certutil -N -d "sql:$DIR_PERFIL" --empty-password
 else
-    echo "Erro: Falha ao adicionar ${NOME_SAFESIGN}. Verifique se o caminho da biblioteca está correto."
+    echo "Banco de dados já existe."
 fi
 
-echo "---"
+# --- Passo 3: Criar o arquivo profiles.ini ---
+# Isso faz o Firefox reconhecer a pasta que criamos como o perfil padrão
+if [ ! -f "$ARQUIVO_INI" ]; then
+    echo "Criando arquivo profiles.ini..."
+    cat <<EOF > "$ARQUIVO_INI"
+[Profile0]
+Name=$PERFIL_NOME
+Path=$PERFIL_PATH
+IsRelative=1
+Default=1
 
-# Adicionar SafeNet
-echo "Adicionando a biblioteca ${NOME_SAFENET}..."
-yes | modutil -add "${NOME_SAFENET}" -libfile "${CAMINHO_SAFENET}" -dbdir "sql:${CAMINHO_DO_PERFIL}"
-
-# Verifica se a adição foi bem-sucedida
-if [ $? -eq 0 ]; then
-    echo "${NOME_SAFENET} adicionado com sucesso."
-else
-    echo "Erro: Falha ao adicionar ${NOME_SAFENET}. Verifique se o caminho da biblioteca está correto."
+[General]
+StartWithLastProfile=1
+Version=2
+EOF
 fi
 
+echo "Perfil configurado em: $DIR_PERFIL"
 echo "---"
-echo "Operação concluída. Verifique os resultados acima."
+
+# --- Passo 4: Adicionar as bibliotecas de segurança (Tokens) ---
+
+# Função para adicionar token com verificação
+adicionar_token() {
+    local nome="$1"
+    local lib="$2"
+    
+    if [ -f "$lib" ]; then
+        echo "Adicionando a biblioteca $nome ($lib)..."
+        # Verifica se já existe para não duplicar erro
+        if modutil -list -dbdir "sql:$DIR_PERFIL" | grep -q "$nome"; then
+             echo "Módulo $nome já está configurado."
+        else
+             # Tenta adicionar
+             echo -e "\n" | modutil -add "$nome" -libfile "$lib" -dbdir "sql:$DIR_PERFIL"
+             if [ $? -eq 0 ]; then
+                 echo "$nome adicionado com sucesso."
+             else
+                 echo "Erro ao adicionar $nome."
+             fi
+        fi
+    else
+        echo "Aviso: Biblioteca para $nome não encontrada em $lib. Pulei esta etapa."
+    fi
+    echo "---"
+}
+
+adicionar_token "$NOME_SAFESIGN" "$CAMINHO_SAFESIGN"
+adicionar_token "$NOME_SAFENET" "$CAMINHO_SAFENET"
+
+echo "Operação de configuração de tokens concluída."
